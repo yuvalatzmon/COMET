@@ -1,6 +1,8 @@
 # COMET
 Code (MATLAB) and data for the paper "Learning Sparse Metrics, One Feature at a Time", Y. Atzmon, U. Shalit, G. Chechik, JMLR 2015
 
+[Project page](http://chechiklab.biu.ac.il/~yuvval/COMET/)
+
 ## Installation Instructions (tested on linux)
 1. Download this repository or clone it using `git clone https://github.com/chechiklab/COMET`
 
