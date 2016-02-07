@@ -40,8 +40,8 @@ initpaths % Edit initpaths.m according to your respective environment.
 
 %% Set parameters:
 
-%dataset_name = 'protein';
-dataset_name = 'RCV1_4_5K';
+dataset_name = 'protein';
+%dataset_name = 'RCV1_4_5K';
 
 % Default values:
 cfg.step_size_bound_weight = 0.3; % Default value is 0.3,
