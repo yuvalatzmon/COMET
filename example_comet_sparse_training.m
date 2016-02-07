@@ -114,7 +114,7 @@ cfg.samples_tst = samples_tst;
 cfg.labels_tst = labels_tst;
 
 %%% Set params for saving snapshot when performance logging is enabled. %%%
-cfg.path_results_mat = './results_mat/';
+cfg.path_results_mat = './snapshots_mat/';
 
 % cfg.hyp_params is a struct used for generating snapshot filenames
 % (will make a filename out of this struct fields).
@@ -150,9 +150,9 @@ fprintf('\n\nRESULTS:\n========\n');
 % COMET performance:
 log_cnt = log_performance.log_cnt;
 
-fprintf('COMET    : mean AP     tst_set = %f\n', log_performance.tst_set_mean_avg_prec_history(log_cnt));
-fprintf('COMET    : AUC         tst_set = %f\n', log_performance.tst_set_AUC_history(log_cnt));
-fprintf('COMET    : precision@5 tst_set = %f\n', log_performance.tst_set_prec_allk_history(5, log_cnt));
+fprintf('Sparse COMET    : mean AP     tst_set = %f\n', log_performance.tst_set_mean_avg_prec_history(log_cnt));
+fprintf('Sparse COMET    : AUC         tst_set = %f\n', log_performance.tst_set_AUC_history(log_cnt));
+fprintf('Sparse COMET    : precision@5 tst_set = %f\n', log_performance.tst_set_prec_allk_history(5, log_cnt));
 fprintf('\n');
 
 % Euclidean init performance:
@@ -161,6 +161,7 @@ fprintf('Euclidean: mean AP     tst_set = %f\n', log_performance.tst_set_mean_av
 fprintf('Euclidean: AUC         tst_set = %f\n', log_performance.tst_set_AUC_history(1));
 fprintf('Euclidean: precision@5 tst_set = %f\n', log_performance.tst_set_prec_allk_history(5, 1));
 
-fprintf('\nnnz(metric) %d, sparsity of metric = %1.3f\n', nnz(metric), nnz(metric)/numel(metric));
+fprintf(['\nnnz(metric) %d, sparsity of metric = %1.3f (note that ' ...
+         'the metric sparsity is ~x2 the group (row) sparsity)\n'], nnz(metric), nnz(metric)/numel(metric));
 
 

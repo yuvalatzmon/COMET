@@ -105,10 +105,7 @@ elseif is_pattern_in_str('v1Prox', cfg.hyp_params.method)
 end
 
 %% training
-ST = dbstack;
-func_name = ST.name;
-filtered_printf(flgShow, 'Starting to train with %s\n', func_name)
-tic_train = tic;
+filtered_printf(flgShow, 'Starting to train with sparse COMET\n')
 iter_num = 1; prev_progress = 0;
 cfg_d_repeats = cfg.num_d_repeats;
 
@@ -203,7 +200,7 @@ for k = coordinates_list
             non_overlap_V = -1 + zeros(d-1, d); % override all Vs (and make it dense) to mark that we've break this traininig.
             cfg.num_d_repeats = cfg_d_repeats;
 
-            filtered_printf(flgShow, '\n ! ! ! Matrix is TOO DENSE! BREAKING the training ! ! !\n\n');
+            filtered_printf(flgShow, '\n ! ! ! Matrix is TOO DENSE! ABORTING the training ! ! !\n\n');
             break;
             
         end
@@ -220,7 +217,6 @@ for k = coordinates_list
     % complete iteration
     iter_num = iter_num + 1;
 end
-if flgShow; toc(tic_train); end
 
 % If logging is configured (slows down training), then evaluate
 % performance after the last iteration

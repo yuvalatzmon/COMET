@@ -19,9 +19,11 @@ To run the examples with the protein dataset, one should download and install LI
 http://www.csie.ntu.edu.tw/~cjlin/libsvm/#download
 
 ### Sparse COMET
-1. Open `example_comet_sparse_training.m` and comment-in the dataset name you would like to train upon ('protein' or 'RCV1_4_5K').
+1. Follow the instructions above to install SuiteSparse (4.4.5+) and LIBSVM. 
 
-2. Execute example_comet_sparse_training.m from MATLAB.
+2. Open `example_comet_sparse_training.m` and comment-in the dataset name you would like to train upon (`'protein'` or `'RCV1_4_5K'`).
+
+3. Execute `example_comet_sparse_training.m` from MATLAB.
 
 ### Dense COMET
 TBD
