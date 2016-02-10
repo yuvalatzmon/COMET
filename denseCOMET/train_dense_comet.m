@@ -3,10 +3,9 @@ function [W, LD] = ...
 % [W, LD] = ...
 %   train_dense_comet(cfg, triplets_trn, triplets_trn_Q, triplets_trn_diff_mat)
 %
-% Train dense COMET metric learning algorithm,
-%                                         ("Metric Learning One Feature at a 
-%                                         Time", Y. Atzmon, U. Shalit, 
-%                                         G. Chechik, 2015 )
+% Train COMET metric learning algorithm, with dense coordinate steps.
+% ("Learning Sparse Metrics, One Feature at a Time", 
+%   Y. Atzmon, U. Shalit, G. Chechik, 2015 )
 % 
 % Input arguments:
 % cfg.num_d_repeats    : Number of times repeating the iterations on the d 
@@ -54,8 +53,6 @@ LD = ldlchol(sparse(W)); % LDL decomposition, takes only sparse matrices
 filtered_printf(flgShow, 'Evaluates the initial linlosses\n');
 t_linlosses = tic;
 linlosses = init_linlosses(triplets_trn, triplets_trn_Q, triplets_trn_diff_mat, diag(W));
-%load protein_init_linlosses
-%fprintf('Warning, loaded from file protein_init_linlosses');
 if flgShow; toc(t_linlosses); end
 
 % generate features (coordinates) list to iterate upon
@@ -85,34 +82,6 @@ for k = coordinates_list
     % complete iteration
     iter_num = iter_num + 1;
 end
-%[L, D] = ldlsplit(LD);
-%err = norm (L*D*L' - W, 1);
-nnz(LD)
 
 end
 
-% function linlosses = init_linlosses(triplets_trn, triplets_trn_Q, ...
-%     triplets_trn_diff_mat, W)
-% % linlosses = init_linlosses(triplets_trn, triplets_trn_Q, ...
-% %   triplets_trn_diff_mat, W)
-% %
-% % Evaluates the initial linlosses. linlosses is a vector that 
-% % holds the (per triplet) value of the product of
-% % query_smp.' * W * (neg_smp - pos_smp). Dimensions are triplets x 1
-% %
-% % It is named linlosses, because the loss per triplet 
-% % equals [1 + linlosses]_+
-
-% Tcnt = size(triplets_trn_Q,1);
-% linlosses = zeros(Tcnt,1);
-% samples_num = max(triplets_trn(:,1));
-% triplets_trn_diff_mat_T = triplets_trn_diff_mat.'; % selecting columns is much faster with sparse matrices
-% for n=1:samples_num
-%     t_q_eq_n_condition = (triplets_trn(:,1) == n);
-%     query_smp = triplets_trn_Q(find(t_q_eq_n_condition,1),:);
-%     q_W = sparse(query_smp*W);
-%     linlosses(t_q_eq_n_condition) = ...
-%         (q_W*triplets_trn_diff_mat_T(:, t_q_eq_n_condition));
-    
-% end
-% end

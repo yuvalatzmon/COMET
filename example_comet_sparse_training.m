@@ -1,8 +1,8 @@
 %% Example for metric learning with COMET 
-% ("Metric Learning One Feature at a Time", 
+% ("Learning Sparse Metrics, One Feature at a Time", 
 %   Y. Atzmon, U. Shalit, G. Chechik, 2015 )
 %
-% This example learns a metric for the protein (LIBSVM) dataset and
+% This example learns a sparse metric for the protein (LIBSVM) dataset and
 % RCV1_4 with 5K features, using sparse COMET.
 % To run this example with the protein dataset, you should download and
 % install LIBSVM matlab package and add it to your matlab path

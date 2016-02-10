@@ -1,16 +1,18 @@
-function [ new_W, new_cholLD, new_invW, new_V, linlosses, step_size_bound_grad, iterlog ]= ...
+function [ new_W, new_cholLD, new_invW, new_V, linlosses, step_size_bound_grad ]= ...
     prox1_stepk(k, cfg, W, cholLD,  invW, V, linlosses, triplets_trn_Q, ...
-    triplets_trn_diff_mat, iterlog)
-% [ new_W, new_cholLD, new_invW, new_V, linlosses, step_size_bound, myRcond]= ...
-%     grad_stepk_sparse(k, cfg, W, cholLD,  V, linlosses, triplets_trn_Q, ...
+    triplets_trn_diff_mat)
+% function [ new_W, new_cholLD, new_invW, new_V, linlosses, step_size_bound_grad ]= ...
+%     prox1_stepk(k, cfg, W, cholLD,  invW, V, linlosses, triplets_trn_Q, ...
 %     triplets_trn_diff_mat)
-% A gradient step on a feature (a row-column coordinate k), with embedding
+%
+% A proximal (sparse) step on a feature (a row-column coordinate k)
 %
 % Input arguments:
 % k         : The feature id on the metric matrix.
-% cfg       : See train_comet.m
+% cfg       : See train_sparse_comet.m
 % W         : The current metric matrix.
-% choleLD   : LD of LDLT decomposition (of CHOLMOD package)
+% cholLD    : LD of LDLT decomposition (of CHOLMOD package)
+% invW      : The inverse of the current metric matrix.
 % V         : Non overlapping terms of the metric.
 % linlosses : A vector that holds the value of the product of
 %             query_smp.' * W * (neg_smp - pos_smp), per triplet.
@@ -19,16 +21,14 @@ function [ new_W, new_cholLD, new_invW, new_V, linlosses, step_size_bound_grad, 
 %
 % triplets_trn_Q        : See train_comet.m
 % triplets_trn_diff_mat : See train_comet.m
-% cholLD    : LD of Cholesky decomposition (of CHOLMOD package)
 %
 % output arguments:
 % new_W           : The newly evaluated metric matrix.
 % new_cholLD      : Updated LD of LDLT decomposition (of CHOLMOD package)
+% new_invW        : The inverse of the newly evaluated metric matrix.
 % new_V           : Updated non overlapping terms of the metric.
 % linlosses       : The newly evaluated linlosses.
-% step_size_bound : The current step size bound (for logging) .
-% myRcond         : new_W matrix condition number (evaluated as in matlabs
-%                   rcond) .
+% step_size_bound_grad : The current step size bound (for logging) .
 
 %% init locals
 d = size(W,1);
@@ -50,7 +50,6 @@ minus_grad(k) = []; %remove the main diagonal element;
 %% Make a proximal update, with the step_size given by hyper params
 
 hp_stepsize = cfg.max_step_size;
-% new_v = prox_updatek(k, hp_stepsize, ...
 new_v = prox_updatek(k, hp_stepsize*cfg.step_size_bound_weight, ...
     cfg.sparse_weight, V, minus_grad);
 
@@ -61,14 +60,9 @@ if all(new_v == V(:,k))
     new_invW = invW;
     new_V = V;
     step_size_bound_grad = inf;
-    iterlog.is_zero_step(end+1) = true; % to remove on publication ver.
-    iterlog.is_origin_PD(end+1) = true; % to remove on publication ver.
-    iterlog.used_schur_bound(end+1) = false; % to remove on publication ver.
-    iterlog.actual_step_size(end+1) = 0; % to remove on publication ver.
     return;    
 
 end
-iterlog.is_zero_step(end+1) = false; % to remove on publication ver.
 
 %% EVAL A^-1
 ids_A = true(1,d);
@@ -92,12 +86,10 @@ minus_grad_with_zero_main_diag = insert_to_vec_at_pos_k(0, k, minus_grad);
     eval_maxstep_size_with_schur_comp...
     (k, W, minus_grad_with_zero_main_diag, ids_A, LD_A, invA_B);
 
-% [step_size_bound_grad, is_schurcond_bound] ...
-%     = min([cfg.max_step_size, schurcond_bound_grad*cfg.step_size_bound_weight]); % Update step size.
 [step_size_bound_grad, is_schurcond_bound] ...
     = min([cfg.max_step_size, schurcond_bound_grad]); % Update step size.
 is_schurcond_bound = is_schurcond_bound-1;
-iterlog.used_schur_bound(end+1) = is_schurcond_bound; % to remove on publication ver.
+
 
 
 
@@ -121,14 +113,11 @@ if norm(old_v_with_main_diag_element) > 0
 
 else
     % A coefficient to stay off PSD.
-%     backoff_weight = cfg.step_size_bound_weight;
-%     
     if is_schurcond_bound
         backoff_weight = cfg.step_size_bound_weight;
     else
         backoff_weight = 1;
     end
-%     backoff_weight = 1;
     is_origin_PD = true;
 end
 
@@ -137,19 +126,14 @@ if is_origin_PD
     % then any prox step, with a eta_grad step size, keeps PSD.
     
     % If cfg.sparse_weight==0 then we need to take a back-off from the PSD
-    % cone boundary. Because a PSD solution will be ill-conditioned.
+    % cone boundary. Because otherwise, a PSD solution will be ill-conditioned.
     if cfg.sparse_weight == 0
-        error('Zero sparse weight is not supported yet. Use dense COMET instead.');
+        error('Zero sparse weight is not supported. Use dense COMET instead.');
     end
        
     prox_step_size = backoff_weight*step_size_bound_grad;
     new_v = prox_updatek(k, prox_step_size, cfg.sparse_weight, V, minus_grad);
-
-%     prox_step_size
-%     hp_stepsize*cfg.step_size_bound_weight % PRINTING TO SCREEN
-    
-    iterlog.is_origin_PD(end+1) = true; % to remove on publication ver.
-    iterlog.actual_step_size(end+1) = prox_step_size;
+ 
 else
     warning('Skipped update, origin is not PD\n');
     new_W = W;
@@ -157,9 +141,6 @@ else
     new_invW = invW;
     new_V = V;
     step_size_bound_grad = inf;
-    iterlog.is_zero_step(end) = true; % to remove on publication ver.
-    iterlog.is_origin_PD(end+1) = false; % to remove on publication ver.
-    iterlog.actual_step_size(end+1) = nan;
     return;    
 end    
    
@@ -199,7 +180,7 @@ new_invW = invW - W1update;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Update embedding (LDL Cholesky decomposition)
-% Note that there is no support for change row/col, so in order to change
+% Note that there is no support for change row/col in CHOLMOD, so in order to change
 % a row/col we first need to delete it, and then add it back with the
 % updated values. Also note that deleting a row/col actually set it to the
 % kth row/col of identity, and that adding a row assumes kth row/col is a kth
@@ -215,11 +196,11 @@ QmT_u = triplets_trn_diff_mat(:,k).*QmT_u;
 TmQ_u = triplets_trn_diff_mat*(update);
 TmQ_u = triplets_trn_Q(:,k).*TmQ_u;
 linlosses = linlosses + QmT_u + TmQ_u;
-
-
 end
 
+
 function vec_new = insert_to_vec_at_pos_k(val, k, vec)
+% function vec_new = insert_to_vec_at_pos_k(val, k, vec)
 % Inserts (appends) a value at position k.
 % Note that it always returns a column vector.
 
@@ -230,6 +211,7 @@ vec_new((k+1):end) = vec(k:end);
 end
 
 function z = prox_updatek(k, stepsize, sparse_weight, V, minus_grad)
+% function z = prox_updatek(k, stepsize, sparse_weight, V, minus_grad)
 % z = h * [1 - sparse_weight/norm(h)]_+
 % Where: h = vk - stepsize * gradient
 % This evaluation costs O(d).
@@ -252,6 +234,8 @@ end
 
 function [step_size_bound] = eval_maxstep_size_with_schur_comp ...
     (k, W, u, ids_A, LD_A, invA_B)
+% function [step_size_bound] = eval_maxstep_size_with_schur_comp ...
+%     (k, W, u, ids_A, LD_A, invA_B)
 
 u_A = sparse(u); u_A(k) = 0;
 invA_u = ldlsolve(LD_A,  u_A); invA_u(k) = [];

@@ -1,15 +1,16 @@
-function [ new_W, new_cholLD, linlosses, eta, myRcond]= ...
+function [ new_W, new_cholLD, linlosses, eta]= ...
     grad_stepk_dense(k, cfg, W, cholLD,  linlosses, triplets_trn_Q, ...
     triplets_trn_diff_mat)
-% [ new_W, new_cholLD, linlosses, step_size_bound, myRcond]= ...
+% function [ new_W, new_cholLD, linlosses, eta]= ...
 %     grad_stepk_dense(k, cfg, W, cholLD,  linlosses, triplets_trn_Q, ...
 %     triplets_trn_diff_mat)
-% A gradient step on a feature (a row-column coordinate k), with embedding
+% A gradient step on a feature (a row-column coordinate k).
 %
 % Input arguments:
 % k         : The feature id on the metric matrix.
 % cfg       : See train_comet.m
 % W         : The current metric matrix.
+% cholLD    : LD of Cholesky decomposition (of CHOLMOD package)
 % linlosses : A vector that holds the value of the product of 
 %             query_smp.' * W * (neg_smp - pos_smp), per triplet. 
 %             Dimensions are triplets x 1. It is named linlosses, 
@@ -17,15 +18,12 @@ function [ new_W, new_cholLD, linlosses, eta, myRcond]= ...
 %
 % triplets_trn_Q        : See train_comet.m
 % triplets_trn_diff_mat : See train_comet.m
-% cholLD    : LD of Cholesky decomposition (of CHOLMOD package)
 %
 % output arguments:
 % new_W           : The newly evaluated metric matrix.
 % new_cholLD      : updated LD of Cholesky decomposition (of CHOLMOD package)
 % linlosses       : The newly evaluated linlosses.
 % eta             : The current step size bound (for logging) .
-% myRcond         : new_W matrix condition number (evaluated as in matlabs 
-%                   rcond) .
 
 %% init locals
 d = size(W,1);
@@ -109,7 +107,6 @@ else
     schurcond_bound_grad = max(eta_roots);
 
 end
-% eta = min(cfg.max_step_size, step_size_bound-eps); % Update step size.
 
 % Update step size.
 eta = min([cfg.max_step_size, ...
@@ -123,10 +120,11 @@ new_W(:,k) = W(:,k) + eta*u;
 new_W(k,:) = new_W(k,:) + eta*u.';
 
 % Update embedding (LDL Cholesky decomposition)
-% Note that there is no support for change row/col, so in order to change
-% a row/col we first need to delete it, and then add it back with the
-% updated values. Also note that deleting a row/col actually set it to the 
-% kth row/col of identity, and that adding a row assumes kth row/col is a kth
+% Note that there is no support for change row/col on CHOLDMOD
+% package, so in order to change a row/col we first need to delete
+% it, and then add it back with the updated values. Also note that
+% deleting a row/col actually set it to the kth row/col of
+% identity, and that adding a row assumes kth row/col is a kth
 % row/col of identity.
 updated_row = sparse(new_W(:,k));
 new_cholLD = ldlrowmod (LD_A, k, updated_row) ;%add row

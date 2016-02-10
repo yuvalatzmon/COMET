@@ -4,9 +4,8 @@ function [W, LD, invW, log_performance] = ...
 %   train_sparse_comet(cfg, triplets_trn, triplets_trn_Q, triplets_trn_diff_mat)
 %
 % Train COMET metric learning algorithm, with a proximal sparse step.
-%                                         ("Metric Learning One Feature at a
-%                                         Time", Y. Atzmon, U. Shalit,
-%                                         G. Chechik, 2015 )
+% ("Learning Sparse Metrics, One Feature at a Time", 
+%   Y. Atzmon, U. Shalit, G. Chechik, 2015 )
 %
 % Input arguments:
 % cfg.num_d_repeats    : Number of times repeating the iterations on the d
@@ -93,17 +92,6 @@ for k=1:cfg.num_d_repeats
 end
 coordinates_list = coordinates_list(:).';
 
-% init iterations logger (to remove in publication version)
-nsteps = length(coordinates_list);
-if is_pattern_in_str('L12', cfg.hyp_params.method)
-    iterlog = struct();
-elseif is_pattern_in_str('v1Prox', cfg.hyp_params.method)
-    [iterlog.is_zero_step, ...
-        iterlog.is_origin_PD, ...
-        iterlog.used_schur_bound,...
-        iterlog.actual_step_size] = deal([]);
-end
-
 %% training
 filtered_printf(flgShow, 'Starting to train with sparse COMET\n')
 iter_num = 1; prev_progress = 0;
@@ -169,12 +157,11 @@ for k = coordinates_list
     if k == -1
         break; % break if we only train the main diagonal
     end
-    % Do a single coordinate step:
-    
-    % Do a proximal step (version 1)
-    [ W, LD, invW, non_overlap_V, linlosses, step_size, iterlog] = ...
+   
+    % Do a proximal step 
+    [ W, LD, invW, non_overlap_V, linlosses, step_size] = ...
         prox1_stepk(k, cfg, W, LD, invW, non_overlap_V, ...
-                    linlosses, triplets_trn_Q, triplets_trn_diff_mat, iterlog);        
+                    linlosses, triplets_trn_Q, triplets_trn_diff_mat);        
     
     if iter_num <=d && mod(iter_num, ceil(d/5)) == 0
         currVsparsity = nnz(non_overlap_V(:, coordinates_list(1:iter_num)))...
@@ -283,13 +270,6 @@ t_tmp = datestr(now);
 d = size(W,1); % dimension
 current_d_step = floor((step_num-1)/ d);
 
-if isfield(trained_obj, 'git_commit_hash')
-    git_commit_hash = trained_obj.git_commit_hash;
-else
-    git_commit_hash = '';
-    trained_obj.git_commit_hash = git_commit_hash;
-end
-
 trained_obj.hyp_params.num_d_repeats = current_d_step;
 [ results_filename, model_filename] = ...
     generate_snapshot_fnames(trained_obj.hyp_params);
@@ -305,7 +285,7 @@ trained_obj.log_performance = log_performance;
 
 [tstart, tend] = deal(log_performance.tstart, log_performance.tend);
 save('-v7.3', fullfile(trained_obj.path_results_mat, model_filename), ...
-    'git_commit_hash', 'trained_obj', 'tstart', 'tend');
+    'trained_obj', 'tstart', 'tend');
 fprintf('saved model snapshot: %s.mat\n',fullfile(trained_obj.path_results_mat, model_filename));
 
 snapshot_results(trained_obj, results_filename);
@@ -321,7 +301,6 @@ end
 
 function snapshot_results(trained_obj, results_filename)
 log_perf = trained_obj.log_performance;
-git_commit_hash = trained_obj.git_commit_hash;
 tstart = trained_obj.log_performance.tstart;
 tend = trained_obj.log_performance.tend;
 
@@ -342,21 +321,12 @@ result_criteria.mAP    = tst_set_mean_avg_prec;
 result_criteria.AUC    = tst_set_AUC;
 result_criteria.V_row_sparsity = log_perf.V_row_sparsity(log_cnt);
 
-% The below criterion is used to do a first iteration of single epoch
-% selection of hyper of params that give a sparsity of ~O(sqrt(d)). 
-target_sparsity = mean([sqrt(d), sqrt(d)*log10(d) ])/d; 
-result_criteria.minus_diff_Vsparsity_from_Osqrtd = ...
-    1 - abs(log_perf.V_row_sparsity(log_cnt) - target_sparsity);
-
-
 performance_results_vars = {'tst_set_prec_allk', 'tst_set_mean_avg_prec',...
     'tst_set_AUC', 'result_criteria', 'tstart', 'tend', ...
     'tstart_eval_prec', 'tend_eval_prec'};
 
-%% save the training performace results + the current git commit hash
+%% save the training performace results
 try
-    performance_results_vars{end+1} = 'git_commit_hash';
-    
     full_fname_results = ...
         fullfile(trained_obj.path_results_mat, results_filename);
     save(full_fname_results, performance_results_vars{1:end})
@@ -366,10 +336,6 @@ catch e
     disp(getReport(e, 'extended'))
     clk = clock;
     disp(num2str(clk));
-    screenSize = get(0,'ScreenSize');
-    if ~isequal(screenSize(3:4),[1 1])
-        keyboard
-    end
 end
 
 end
