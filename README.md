@@ -28,5 +28,10 @@ http://www.csie.ntu.edu.tw/~cjlin/libsvm/#download
 3. Execute `example_comet_sparse_training.m` from MATLAB.
 
 ### Dense COMET
-TBD
+1. Follow the instructions above to install SuiteSparse (4.4.5+) and LIBSVM. 
+
+2. Open `example_comet_dense_training.m` and comment-in the dataset name you would like to train upon (`'protein'` or `'RCV1_4_5K'`).
+
+3. Execute `example_comet_dense_training.m` from MATLAB.
+
 
