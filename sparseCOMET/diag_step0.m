@@ -29,15 +29,19 @@ cholLD = ldlchol(W);
 
 function [ diag_W, diag_invW, zero_step_ind] = single_diag_step ...
     (cfg, diag_W, diag_invW, linlosses, QT_elements)
+% function [ diag_W, diag_invW, zero_step_ind] = single_diag_step ...
+%    (cfg, diag_W, diag_invW, linlosses, QT_elements)
+%
+% Performs a single graident step over a diagonal matrix.
 
-CONDMAX = 1e6; % The max relation between maximal and minimal values
-% on the diagonal (eigen values).
+CONDMAX = 1e6; % The max condition number (relation between maximal and minimal values
+               % on the diagonal (eigen values)).
 
 QT_IndsHingeLosses = bsxfun(@times, ((1+linlosses)>0), QT_elements);
 diag_hinge_grad = sum(QT_IndsHingeLosses,1).';
 
 minus_grad = (-1)*(diag_hinge_grad ...
-    - cfg.logdet_weight*diag_invW);
+    - cfg.logdet_weight*diag_invW); % Evaluate the step update.
 
 % A do..while (like) loop, for protection against too big step sizes.
 % It shouldn't run for many iterations since we have a logdet barrier.

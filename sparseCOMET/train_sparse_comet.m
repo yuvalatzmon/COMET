@@ -171,19 +171,10 @@ for k = coordinates_list
     end
     % Do a single coordinate step:
     
-    if is_pattern_in_str('L12', cfg.hyp_params.method)
-        % Do L12 regularization step
-        [ W, LD, invW, linlosses, step_size] = ...
-            grad_stepk_sparse(k, cfg, W, LD, invW, linlosses, ...
-            triplets_trn_Q, triplets_trn_diff_mat);
-    elseif is_pattern_in_str('v1Prox', cfg.hyp_params.method)
-        % Do a proximal step (version 1)
-        [ W, LD, invW, non_overlap_V, linlosses, step_size, iterlog] = ...
-            prox1_stepk(k, cfg, W, LD, invW, non_overlap_V, ...
-            linlosses, triplets_trn_Q, triplets_trn_diff_mat, iterlog);        
-    else
-        error('unknown method %s\n', cfg.hyp_params.method);
-    end
+    % Do a proximal step (version 1)
+    [ W, LD, invW, non_overlap_V, linlosses, step_size, iterlog] = ...
+        prox1_stepk(k, cfg, W, LD, invW, non_overlap_V, ...
+                    linlosses, triplets_trn_Q, triplets_trn_diff_mat, iterlog);        
     
     if iter_num <=d && mod(iter_num, ceil(d/5)) == 0
         currVsparsity = nnz(non_overlap_V(:, coordinates_list(1:iter_num)))...
@@ -205,7 +196,6 @@ for k = coordinates_list
             
         end
     end
-    log_performance.iterlog = iterlog; %to remove on publication ver.
 
     % display progress
     curr_progress = floor(100*(iter_num/length(coordinates_list) ));

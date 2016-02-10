@@ -1,8 +1,8 @@
-function [ new_W, new_cholLD, new_invW, linlosses, step_size_bound, myRcond]= ...
-    grad_stepk_sparse(k, cfg, W, cholLD,  invW, linlosses, triplets_trn_Q, ...
+function [ new_W, new_cholLD, linlosses, eta, myRcond]= ...
+    grad_stepk_dense(k, cfg, W, cholLD,  linlosses, triplets_trn_Q, ...
     triplets_trn_diff_mat)
-% [ new_W, new_cholLD, new_invW, linlosses, step_size_bound, myRcond]= ...
-%     grad_stepk_sparse(k, cfg, W, cholLD,  linlosses, triplets_trn_Q, ...
+% [ new_W, new_cholLD, linlosses, step_size_bound, myRcond]= ...
+%     grad_stepk_dense(k, cfg, W, cholLD,  linlosses, triplets_trn_Q, ...
 %     triplets_trn_diff_mat)
 % A gradient step on a feature (a row-column coordinate k), with embedding
 %
@@ -23,7 +23,7 @@ function [ new_W, new_cholLD, new_invW, linlosses, step_size_bound, myRcond]= ..
 % new_W           : The newly evaluated metric matrix.
 % new_cholLD      : updated LD of Cholesky decomposition (of CHOLMOD package)
 % linlosses       : The newly evaluated linlosses.
-% step_size_bound : The current step size bound (for logging) .
+% eta             : The current step size bound (for logging) .
 % myRcond         : new_W matrix condition number (evaluated as in matlabs 
 %                   rcond) .
 
@@ -39,13 +39,10 @@ u_TmQ = (Tk_m_HingeLosses.'*triplets_trn_Q).';
 
 %% Eval the gradient symmetric update:
 e_k = sparse(zeros(d, 1)); e_k(k) = 1;
-d_logdet = ldlsolve(cholLD, e_k); 
-
-d_regulizer = W(:,k)/norm(W(:,k)) ; %L12
-d_regulizer(k) = 0; % We exclude the main diagonal from L12 regularization.
+d_logdet = ldlsolve(cholLD, e_k); % equals A^-1(:,k)
 
 u = (-1)*((u_QmT+u_TmQ)/2 + ...
-    cfg.sparse_weight*d_regulizer - cfg.logdet_weight*(d_logdet));
+    cfg.frob_weight*W(:,k) - cfg.logdet_weight*(d_logdet));
 
 %% EVAL A^-1 
 ids_A = true(1,d);
@@ -76,14 +73,14 @@ c = -(W(k,k) -  W(k, ids_A)*invA_B);
 
 eta_roots = roots([a b c]); % A bound for the step size (eta)
 if any(imag(eta_roots(:))) % If roots are imaginary then step size = 0
-    step_size_bound = 0;
+    schurcond_bound_grad = 0;
     if a>0
         error(['eta roots is complex and a > 0 --> i.e. inequiality' ...
             ' ax^2+bx+c<0 doesn''t hold!!'])
     end
 elseif a == 0 && b ==0 % If a,b  == 0 then ineq always holds for c<0 and for all eta.
     if c<0
-        step_size_bound = inf;
+        schurcond_bound_grad = inf;
     else
         error('inequality: (%f)*eta^2 + (%f)*eta + (%f)\n < 0 is false',...
             a, b, c);
@@ -91,9 +88,9 @@ elseif a == 0 && b ==0 % If a,b  == 0 then ineq always holds for c<0 and for all
     
 elseif a ==0
     if b<0 && c<0
-        step_size_bound = inf;
+        schurcond_bound_grad = inf;
     elseif b>0 && c<0
-        step_size_bound = -c/b;
+        schurcond_bound_grad = -c/b;
     else
         error('inequality: (%f)*eta^2 + (%f)*eta + (%f)\n < 0 is false',...
             a, b, c); 
@@ -107,21 +104,23 @@ else
     end
     
     % Weight to stay off nulling of eigenvalues.
-    step_size_bound = cfg.step_size_bound_weight*max(eta_roots); 
-end
+%     step_size_bound = cfg.step_size_bound_weight*max(eta_roots); 
 
-eta = min(cfg.max_step_size, step_size_bound-eps); % Update step size.
+    schurcond_bound_grad = max(eta_roots);
+
+end
+% eta = min(cfg.max_step_size, step_size_bound-eps); % Update step size.
+
+% Update step size.
+eta = min([cfg.max_step_size, ...
+    schurcond_bound_grad*cfg.step_size_bound_weight]); 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Update W
 new_W = W;
 new_W(:,k) = W(:,k) + eta*u;
 new_W(k,:) = new_W(k,:) + eta*u.';
-
-%% update W^-1
-new_invW = sparse(invW); % invW is redundant when the LDLT factorization, 
-                         % is given, so we don't evaluate it.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Update embedding (LDL Cholesky decomposition)
 % Note that there is no support for change row/col, so in order to change

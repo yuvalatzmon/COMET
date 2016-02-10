@@ -40,12 +40,15 @@ initpaths % Edit initpaths.m according to your respective environment.
 
 %% Set parameters:
 
-dataset_name = 'protein';
-%dataset_name = 'RCV1_4_5K';
+ dataset_name = 'protein';
+% dataset_name = 'RCV1_4_5K';
 
 % Default values:
 cfg.step_size_bound_weight = 0.3; % Default value is 0.3,
-                                  % should fit most cases
+                                  % emprically found to yield good
+                                  % results while maintaining
+                                  % numerical stability
+
 cfg.stop_if_dense_above = 0.3; % Abort training if the density
                                % is above 30% on the first epoch
 
@@ -160,8 +163,11 @@ fprintf('\n');
 fprintf('Euclidean: mean AP     tst_set = %f\n', log_performance.tst_set_mean_avg_prec_history(1));
 fprintf('Euclidean: AUC         tst_set = %f\n', log_performance.tst_set_AUC_history(1));
 fprintf('Euclidean: precision@5 tst_set = %f\n', log_performance.tst_set_prec_allk_history(5, 1));
+fprintf('Elapsed training time = %s (HH:MM:SS)\n', ...
+        datestr(datenum(datestr(log_performance.tend)) ...
+                - datenum(log_performance.tstart), 'HH:MM:SS')); % Note that tstart is corrected to compensate for the time it takes to evaluate the performance (e.g. mAP, precision@k, ..) and saving snapshots to filesystem. Therefore, one should use the timining recorded within log_performance, instead of tic-toc.
 
-fprintf(['\nnnz(metric) %d, sparsity of metric = %1.3f (note that ' ...
-         'the metric sparsity is ~x2 the group (row) sparsity)\n'], nnz(metric), nnz(metric)/numel(metric));
+fprintf(['\nnnz(metric) %d, density of metric = %1.3f (note that ' ...
+         'the metric density is ~x2 the group (row) density)\n'], nnz(metric), nnz(metric)/numel(metric));
 
 

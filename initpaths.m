@@ -6,5 +6,8 @@ addpath ('~/git/libsvm/matlab/'); % Set this to the matlab sources
                                   % dataset
 
 addpath packages
+addpath common
+addpath denseCOMET
+addpath sparseCOMET
 
 
