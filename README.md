@@ -35,3 +35,5 @@ http://www.csie.ntu.edu.tw/~cjlin/libsvm/#download
 3. Execute `example_comet_dense_training.m` from MATLAB.
 
 
+## How to set the hyper-params
+There are some technical clarifications need to be made about settings some of the hyper-params. I will document it during march 2016. Send me an email or open an issue on the github repository, if you would like to use this code beforehand and I will assist you.
